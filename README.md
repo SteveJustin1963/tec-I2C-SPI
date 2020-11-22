@@ -1,5 +1,9 @@
 # tec-I2C
  
+model the ref examples to port i2c to the tec-1
+
+
+
 
 https://easyeda.com/editor#id=4ec3298aecf449f3be1aadabb0c80a82
 
