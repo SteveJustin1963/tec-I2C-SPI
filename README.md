@@ -5,38 +5,74 @@
 - https://github.com/SteveJustin1963/tec-Tiny-RTC
 - 
 
-### devices eg
+### i2c toys, devices, etc
 - Accelerometers
+- Actuators
+- ADCs
+- Amplifiers
 - Analog-to-digital converters
 - Audio codecs
+- Automotive sensors
+- Biometric sensors
 - Bluetooth modules
+- Cameras
 - CAN controllers
+- Climate sensors
+- CO2 sensors
+- Current sensors
+- DACs
 - Digital-to-analog converters
+- Displays
+- DVD players
 - EEPROM memory
+- Environmental sensors
 - Ethernet controllers
 - Firewire controllers
+- Gaming controllers
 - GPS modules
 - Gyroscopes
+- Headphones
 - I/O expanders
+- Industrial sensors
+- Infrared sensors
+- Joysticks
+- Keyboards
 - LCD displays
 - LED drivers
+- Light sensors
 - Magnetometers
+- Memory chips
+- Mice
+- Microphones
+- Monitors
 - Motor drivers
 - OLED displays
+- Optical sensors
 - Optocouplers
 - Pressure sensors
+- Printers
 - Real-time clocks
 - Relay drivers
+- Scanners
+- SD card interfaces
 - SD cards
 - SDIO controllers
 - Security chips
+- Security sensors
 - Serial EEPROMs
+- Soil moisture sensors
 - Solenoid drivers
+- Speakers
 - Temperature sensors
+- Touchscreens
+- TVs
+- USB chips
 - USB controllers
 - Video codecs
+- Voltage regulators
+- Webcams
 - Wi-Fi modules
-
+- Wireless transceivers
 
 ## References
  
