@@ -4,6 +4,8 @@ START   EQU     #9000
 REG_AY  EQU     #FFFD
 DAT_AY  EQU     #BFFD
 ;
+
+; This code will clear the screen and print "TXT1" on the screen.
         DI
         LD      A,1
         OUT     (#FE),A
@@ -11,6 +13,10 @@ DAT_AY  EQU     #BFFD
         LD      DE,0
         LD      HL,TXT1
         CALL    PRI_BB
+
+; This code checks if the bit 7 of the value stored at memory address #FE is set. 
+If it is, the code calls a function to clear the screen and then prints the text stored at TXT2 and TXT20.
+
 L1
         LD      A,#7F
         IN      A,(#FE)
@@ -24,6 +30,11 @@ L1
         LD      HL,TXT20
         CALL    PRI_BB
 ;
+; This code displays three lines of text, then waits for input from the user.
+; It loads the address of TXT3 into HL, 0200 into DE, and calls the PRI_BB subroutine. 
+; It then loads the address of TXT4 into HL, 0300 into DE, and calls PRI_BB again. 
+; It does the same thing for TXT5 and 0400. 
+; Finally it calls PRINTHLP and INPUT, and then prints the result.
         LD      HL,TXT3
         LD      DE,#0200
         CALL    PRI_BB
@@ -40,6 +51,12 @@ L1
 
         CALL    PRINT
 
+
+; The code loops infinitely, outputting 1 to port FE and waiting for a keypress. If the keypress is <SPACE>, the program exits. 
+; It runs an infinite loop that loads the value 1 into register A, outputs that value to port FE, loads the value 127 into 
+; register A, reads from port FE into register A, right-shifts register A, and if the carry bit is not set, 
+; jumps to the label CONT1. If the carry bit is set, it enables interrupts and returns.
+
 LOOP
         LD      A,1
         OUT     (#FE),A
@@ -50,6 +67,9 @@ LOOP
         JR      C,CONT1         ;BY <SPACE>
         EI
         RET
+
+
+; This code increments the value at the address stored in ADRES, then calls PRINT to output the new value.
 CONT1
         RRA                     ;INC 1 ADDRESS
         JR      C,CONT2         ;BY <SHIFT>
@@ -58,6 +78,8 @@ CONT1
         LD      (ADRES),HL
         CALL    PRINT
         JR      LOOP
+
+; This code decrements the value at the address stored in the ADRES register, then calls the PRINT routine.
 CONT2
         RRA                     ;DEC 1 ADDRESS
         JR      C,CONT3         ;BY <M>
@@ -66,6 +88,8 @@ CONT2
         LD      (ADRES),HL
         CALL    PRINT
         JR      LOOP
+
+; This code increments the value in the ADRES memory location, prints the new value, and then pauses.
 CONT3
         RRA                     ;INC 256 ADDRESS
         JR      C,CONT4         ;BY "N"
@@ -75,6 +99,8 @@ CONT3
         CALL    PRINT
         CALL    PAUSE
         JR      LOOP
+
+; It decrements the value at memory location ADRES, prints the new value, and then pauses.
 CONT4
         RRA                     ;DEC 256 ADDRESS
         JR      C,CONT5         ;BY "B"
@@ -84,6 +110,8 @@ CONT4
         CALL    PRINT
         CALL    PAUSE
         JR      LOOP
+
+; It reads a character from the keyboard and prints it to the screen. This code loops through inputting and printing data.
 CONT5
         LD      A,#BF           ;REINPUT DATA
         IN      A,(#FE)         ;BY <ENTER>
@@ -94,6 +122,9 @@ CONT5
         CALL    INPUT
         CALL    PRINT
         JP      LOOP
+
+; 
+This code looks for a specific data value, and if it finds it, it sends a code.
 LOOKOUT
         RRA                     ;LOOKOUT DATA
         JP      NC,LOOK1        ;BY <L>
@@ -102,6 +133,10 @@ LOOKOUT
         RRA                     ;MODE SENDING CODE
         JP      C,LOOP          ;BY <J>
 ;----------------------
+; The code is responsible for sending a code out on the data line. 
+; It first sets the direction of the data line to output, 
+; then it sends the code out on the data line, 
+; then it sets the direction of the data line back to input.
 SENDCODE
         LD      BC,REG_AY       ;SELECT B PORT
         LD      A,15
@@ -144,6 +179,13 @@ LOOPSM_0
 
         JP      LOOPSEND
 ;---------------------------
+
+; 
+This code searches for a specific value in memory. It starts by XORing the value with the number 7F. 
+; This is done in order to get a unique value that can be easily identified. 
+; Next, the code loops through all of the values in memory, looking for the unique value. 
+; When it finds the value, it stores the address in the BC register.
+
 SEARCH
         XOR     A               ;SEARCH START SECTION
         OUT     (#FE),A         ;BY <K>
@@ -187,8 +229,12 @@ SEARCH3
 
 ;SDA in 0
 ;SCL in 0
-;*** START SECTION ***
 
+
+
+;*** START SECTION ***
+; The code loads the value 7 into the A register and outputs it to port FE. 
+; It then enables and disables interrupts and jumps to the SEARCH label.
         LD      A,7
         OUT     (#FE),A
         EI
@@ -240,6 +286,8 @@ LOOK1
 ;
         JP      LOOK1
 ;------------------------
+
+; The code gets the value of the AY register, strobes it once, and then returns the value.
 GET_1_
         LD      HL,0
 HANDH
@@ -260,6 +308,8 @@ LP_H
         DJNZ    LP_H
         RET
 
+; 
+; The code gets a byte from the AY register. 
 GET_BYT
         LD      BC,REG_AY
 GET_BYT0
@@ -278,8 +328,8 @@ GET_BYT1
         RET
 
 
-
-
+; 
+; It pauses the program for a moment.
 PAUSE
         LD      HL,#4000
 PAUSE1
@@ -289,6 +339,7 @@ PAUSE1
         JR      NZ,PAUSE1
         RET
 ;
+; It clears the screen and loads the program at 4000h-17FFh into memory.
 CLS
         LD      HL,#4000
         LD      D,H
@@ -298,6 +349,8 @@ CLS
         LD      (HL),L
         LDIR
         RET
+
+; This code prints a decimal number stored in memory at the address ADRES.
 PRINT
         LD      HL,(ADRES)
         LD      DE,#0021
@@ -317,6 +370,7 @@ PRINT
         LD      HL,(ADRES)
         LD      DE,#0405
 ;
+; The code specifically Convert from binary to decimal
 LINE1
         LD      (_MPX),DE
         EX      DE,HL
@@ -340,6 +394,11 @@ LINE3
         RET
 ;----------------------
 ;GENERAL INPUT FROM BUS
+; This code reads data from an input port on a bus.  
+; The code first sets up the A and B ports on the bus as input and output respectively. 
+; It then sets the A port to #FF. 
+; Next, it reads from the input port into HL, starting at the address START. 
+; Finally, it loops until the H register is zero, at which point it returns.
 ;----------------------
 INPUT
         LD      BC,REG_AY       ;SELECT 7 REGISTER
@@ -370,6 +429,8 @@ LOOP_I
         JP      NZ,LOOP_I
         RET
 ;----------------
+; The code defines text strings that are to be displayed on a screen, and their corresponding memory addresses.
+
 TXT1    DEFB    "PRESS <SPACE> TO INPUT DATA FROM I2C",0
 TXT2    DEFB    "SHOW CHANNELS FROM ADDRESS:",0
 TXT20   DEFB    "     |0   |1   |2   |3   |4   |5   |6   |7"
@@ -384,7 +445,11 @@ TXTHLP1 DEFB    "HELP: <SPACE> - EXIT",0
         DEFB    "<K> - MODE SEARCH START SECTION (<SHIFT> - EXIT)",0
         DEFB    "<J> - MODE SEND CODE (GRF - EXIT)",0
 ;------------------------
-PRINTHLP
+; This code is responsible for printing the help text for the PRINTHLP command.
+
+; This code defines the PRINTHLP label and uses it to print text stored in TXTHLP1, starting at memory location 1000. 
+; It then prints text stored in memory locations 1106, 1206, 1306, and 1406. 
+; Finally, it prints text stored in memory location 1506 and branches to the PRI_BB label.PRINTHLP
         LD      HL,TXTHLP1
         LD      DE,#1000
         CALL    PRI_BB
@@ -399,6 +464,8 @@ PRINTHLP
         LD      DE,#1506
         JP      PRI_BB
 ;
+; It is looking for the value in the MPX register and comparing it to the value in the HL register. 
+If it is greater, it will call the _OOR_Y function. If it is not greater, it will continue to the next instruction.
 PRI_B   LD      (_MPX),DE
         EX      DE,HL
         CALL    _OOR_Y
@@ -414,6 +481,8 @@ LPRI_C  POP     BC
         DJNZ    LPRI_B
         RET
 ;
+; 
+; This code is looping through a buffer and printing each character in the buffer to the screen.
 PRI_BB  LD      (_MPX),DE
         EX      DE,HL
         CALL    _OOR_Y
@@ -428,6 +497,12 @@ LPRI_BB LD      A,(HL)
         POP     HL
         JP      LPRI_BB
 ;
+; This code is loading the contents of register A into register C, and the contents of register B into register 0. 
+; Then it is loading the value at address FPRIA into HL, and the value at address _MPX into DE. 
+; Finally, it is calling the _OOR_Y routine and jumping to address #1A1B. why 
+; The code is likely performing some kind of operation on the contents of registers A and B, 
+;using the values at addresses FPRIA and _MPX as input. 
+
 DEC99   LD      C,A
         LD      B,0
 DEC9999 LD      HL,FPRIA
@@ -437,6 +512,10 @@ DEC9999 LD      HL,FPRIA
         JP      #1A1B
 FPRIA   DEFW    _RIA
 ;
+; The code is pushing the AF register onto the stack, loading the DE register with the value in MPX, 
+; calling the OOR_Y function, and then popping the AF register. 
+; The code then loads the L register with the A register and the H register with 0. The code then jumps to DECIMA3.
+
 DECIMA2 PUSH    AF
         LD      (_MPX),DE
         CALL    _OOR_Y
@@ -445,6 +524,9 @@ DECIMA2 PUSH    AF
         LD      H,0
         JR      DECIMA3
 ;
+; It is printing out a number in decimal form. The code is first loading the value to be printed into the DE register, 
+; then calling the PRIDCM routine to print it out. Finally, it is increasing the value in the MPX register 
+; (which presumably contains the next value to be printed) and returning.
 DECIMAL LD      (_MPX),DE
         EX      DE,HL
         CALL    _OOR_Y
@@ -513,6 +595,11 @@ _OOR_Y  LD      H,TABSCR/256
         EX      DE,HL
         RET
 ;---------------------
+; This code is defining two variables, _MPX and _MPY, both of which are set to 0. 
+; It is also defining a variable called ADRES, which is set to the value 0x8700.
+; The code then includes a file called "FONT" which contains the code for a font. 
+; This font is then used to display the text "EOF" on the screen.
+
 _MPX    DEFB    0
 _MPY    DEFB    0
 _OADRS  DEFW    0
