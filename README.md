@@ -1,5 +1,10 @@
 # tec-I2C
  
+ When can we prefer SPI over I2C?
+As a very simplified rule of thumb, you might say that SPI is a better choice for the small number of peripherals that need to transfer a large amount of data (fast , 4 wire). I2C is the best option if you need to control many peripherals, especially if you are transferring a small amount of data to each one ( slower with 2 wire).
+ 
+ 
+ 
 - model from the ref examples to port i2c to the tec-1
 - https://easyeda.com/editor#id=4ec3298aecf449f3be1aadabb0c80a82
 - https://github.com/SteveJustin1963/tec-Tiny-RTC
