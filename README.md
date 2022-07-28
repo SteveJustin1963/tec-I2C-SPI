@@ -62,7 +62,9 @@ As a very simplified rule of thumb, you might say that SPI is a better choice fo
 - SD card interfaces
 - SD cards
 - SDIO controllers
-- servo  https://www.auselectronicsdirect.com.au/16-channel-12-bit-pwm-servo-motor-driver-module-pc?gclid=Cj0KCQjw54iXBhCXARIsADWpsG_12rQjCZjtpo01LxsLLkQ_KE3-Nj6plgwsNtYB68HU6dnAP4un6FwaAvUJEALw_wcB
+- servo  
+  - https://www.auselectronicsdirect.com.au/16-channel-12-bit-pwm-servo-motor-driver-module-pc?gclid=Cj0KCQjw54iXBhCXARIsADWpsG_12rQjCZjtpo01LxsLLkQ_KE3-Nj6plgwsNtYB68HU6dnAP4un6FwaAvUJEALw_wcB
+  - https://core-electronics.com.au/adafruit-16-channel-12-bit-pwm-servo-driver-i2c-interface-pca9685.html
 - Security chips
 - Security sensors
 - Serial EEPROMs
