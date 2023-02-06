@@ -1,5 +1,7 @@
 # tec-I2C-SPI
 - https://www.facebook.com/groups/623556744820045/search/?q=I2C
+- https://www.facebook.com/groups/623556744820045/search/?q=spi
+- 
 
 ## Craig Hart 
 has successfully completed a challenge involving the use of I2C and SPI busses. He is now discussing the possibility of using a Bitbanged SPI bus to communicate with an Arduino board. suggested using a Tec-1-mint and Ken Boak commented that Bitbanged SPI should be possible in MINT, but with a low clock frequency. 
