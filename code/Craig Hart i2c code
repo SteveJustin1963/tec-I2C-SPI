@@ -1,0 +1,830 @@
+; https://github.com/1971Merlin/SPI2C/blob/main/i2c%20test.asm
+
+; ----------------------------------------------------------------------------
+;
+;	Test code for TEC SPI2C board with MAX7219, DS1307 RTC
+;
+;	Uses a MAX7219 8-digit, 7-segment display; Duinotech XC-3714 or equiv.
+;	Uses a DS1307 RTC board; Duinotech XC-4450 or equivilant
+;
+;	Designed to compile for the TEC-1 or SC-1 as the target machine
+;
+;	Assemble with TASM using the command line options -80 -g0
+;
+;	Copyright (C) 2022, Craig Hart. Distributed under the GPLv3 license
+;
+;	https://github.com/1971Merlin/SPI2C
+;
+; ----------------------------------------------------------------------------
+
+
+
+; ----------------------------------------------------------------------------
+; define global constants to the compiler
+; ----------------------------------------------------------------------------
+
+ds1307	.equ	68h
+lc16b	.equ	0a0h
+
+; ----------------------------------------------------------------------------
+; conditional defines - set the target machine platform
+; comment or un-commnt the following two lines to compile for target machine
+; ----------------------------------------------------------------------------
+
+#define SC1
+;#define TEC1
+
+
+
+#ifdef SC1
+
+; using i2cspi's onboard 74ls138 IO ports
+i2cport	.equ	40h
+spiport	.equ	42h
+
+; SC-1 7-seg ports
+disscan .equ	85h
+disseg	.equ	84h
+
+; keyboard port
+keyport	.equ	86h
+
+; start address for SC-1 code
+	.org 2000h
+
+#endif
+
+
+
+#ifdef TEC1
+
+; using TEC's 74ls138 IO ports
+i2cport	.equ	06h
+spiport	.equ	07h
+
+; tec-1 7-seg ports
+disscan	.equ	01h
+disseg	.equ	02h
+
+; keyboard port
+keyport	.equ	00h
+
+
+; start address for TEC code
+	.org 0900h
+
+#endif
+
+
+; ----------------------------------------------------------------------------
+; hardware initialization code starts here
+; ----------------------------------------------------------------------------
+
+; reset i2c bus to idle state
+	ld a,03h	; idle state = SCL and SDA both high
+	ld c,i2cport
+	out (c),a
+
+; reset spi bus to idle state
+	ld c,spiport	; reset CS = 1
+	ld a,0fch	; Raise CS
+	out (c),a
+	call ldelay	; pause to establish stable state
+
+; init SPI 7-seg dispay to required operational mode
+	ld de,09ffh	; decode mode digits 7-0
+	call spi_wr
+	ld de,0a0fh	; max brightness
+	call spi_wr
+	ld de,0b07h	; all 8 digits on
+	call spi_wr
+	ld de,0c01h	; normal op
+	call spi_wr
+
+
+; setup the DS307's initial starting time. & date
+	call set1307
+	call ldelay
+
+; ----------------------------------------------------------------------------
+; main program loop
+; read the clock from the i2c bus
+; display the clock on the internal 7-seg's (for testing!)
+; display the clock also on the i2c 7-seg module
+; ----------------------------------------------------------------------------
+
+loop:
+	call rd1307	; Read DS1387 registers
+	call convdata	; Convert DS1387 data to TEC format
+	call scan_7seg	; put display buffer contents on internal display
+	call maxout	; Put display buffer contents on MAX7219 7-segs
+	call pollkey	; sample keyboard state
+	call handlekey	; process a keystroke, if any
+
+	jp loop
+
+
+; ----------------------------------------------------------------------------
+; handle key; check buffer fora keystroke and do something if found
+; ----------------------------------------------------------------------------
+
+handlekey:
+	push af
+
+	ld a,(keyval)	; bit 7=1 = valid keypress in buffer
+	bit 5,a
+	jr z, nohndl	; nope, no key in buffer
+
+	res 5,a		; clear keypress valid bit - we used our keypress
+	ld (keyval),a
+
+; at this poin A contains a value 0-F represernting the pressed key
+
+	ld a,(mode)	; pressing a key
+	xor 80h
+	ld (mode),a
+
+
+nohndl:	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; poll keyboard; update buffer if a keypress detected
+;
+;
+; ----------------------------------------------------------------------------
+
+pollkey:
+	push af
+	push bc
+	in a,(keyport)
+
+; SC-1 keyboard routine. Ensures only one keypress at a time and loop doesn't pause
+
+#ifdef SC1
+	bit 5,a		; bit 5=1 = key pressed on SC-1
+	jr nz, key
+#endif
+
+
+#ifdef TEC1
+	res 5,a
+	bit 6,a		; bit 6=0 = key pressed on TEC1 (Requires jmon resistor mod)
+	jr nz,nokey
+	set 5,a
+	jr key
+#endif
+
+nokey:
+	ld (keyflag),a
+	jr bail
+
+
+key:	and 3fh		; mask off top bits
+	ld b,a		; backup value
+	ld a,(keyflag)	; did we already see it pressed?
+	bit 5,a
+	jr nz, bail
+
+	ld a,b		; restore value and save; set flag
+	ld (keyflag),a
+	ld (keyval),a
+
+bail:
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; General purpose delay loop
+; ----------------------------------------------------------------------------
+ldelay:	push af
+	push de
+	ld de,08000h
+
+linner:	dec de
+	ld a,d
+	or e
+	jr nz, linner
+
+	pop de
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; make the i2c bus active
+; ----------------------------------------------------------------------------
+
+i2c_start:
+	push af
+	push bc
+	ld c,i2cport
+	ld a,02h	; SCL 1, SDA 0 = start
+	out (c),a
+	ld a,00h
+	out (c),a	; SCL 0, SDA 0 = bus idle active
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; return i2c bus to idle
+; ----------------------------------------------------------------------------
+
+i2c_stop:
+	push af
+	push bc
+	ld c,i2cport
+	ld a,01h	; SCL 0, SDA 1 = stop
+	out (c),a
+	ld a,03h
+	out (c),a	; SCL 1, SDA 1 = bus idle inactive
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; transmit a byte on the i2c bus
+;
+; enter  d = byte to send
+; return d = result
+; ----------------------------------------------------------------------------
+
+i2c_txbyte:
+	push af
+	push bc
+
+	ld c,i2cport
+	ld b,8		; 8 bits
+
+txbyte1:
+	ld a,00h	; prep CL=low, data = ?
+	rlc d		; set CF = data
+	adc a,a		; set bit 0 to our data
+	out (c),a	; SDA=data, SCL = 0
+
+	set 1,a		; Pulse SCL high
+	out (c),a
+	res 1,a		; and SCL low again
+	out (c),a
+
+	dec b
+	jr nz, txbyte1
+
+; get ACK since we did a set address command -- if the device is there we should get an answer bit = 0
+
+	ld a,03h	; SET SCL = 1 (leave data high == bus free for response)
+	out (c),a
+	in a,(c)	;get result; 0 = response received
+	ld d,a		; store d=result
+	ld a,01h	; SCL = 0, SDA = 1
+	out (c),a
+
+; d holds our result, should be a 0-bit if an ACK received
+
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; receive a byte from the i2c bus
+;
+; return d = result
+; ----------------------------------------------------------------------------
+
+i2c_rxbyte:
+	push af
+	push bc
+
+	ld c,i2cport
+	ld b,8		; 8 bits
+	ld d,00h	; (our data to be read)
+
+
+rxbyte1:
+	ld a,01h	; prep SCL=low, data = high (tristate output)
+	out (c),a	; SDA=data, SCL = 0
+
+	ld a,03h	; SCL = 1, SDA = 1
+	out (c),a
+
+	in a,(c)	; read bit (they send us SDA)
+	rrc a		; store into CF
+	rl d		; and read into d
+
+	ld a,01h
+	out (c),a	; SCL = 0, SDA = 1 (tristate output)
+
+	dec b
+	jr nz, rxbyte1
+
+; send ACK since we read a byte
+
+
+ack:	ld a,01h	; Setup ACK pulse SCL=0 with SDA=1
+	out (c),a
+	ld a,03h	; Send ACK SCL = 1, SDA = 1
+	out (c),a
+	ld a,01h	; lower SCL; idle ready state
+	out (c),a
+
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; utility routine to scan the internal 7-seg displays
+;
+; Borrowed from Craig Jones Sc-1 monitor
+;
+; ----------------------------------------------------------------------------
+
+scan_7seg:
+	push af
+	push bc
+	push hl
+
+outerloop:
+	ld c,020h
+	ld hl,disp_buff
+	inc hl
+
+scanloop:
+	ld a,(hl)	; output value
+	call conv7seg
+	out (disseg),a
+	ld a,c		; turn on display
+	out (disscan),a
+	ld b,0c0h
+on:	djnz on
+
+	ld a,00h	; turn off display
+	out (disscan),a
+	ld b,18h
+off:	djnz off
+
+	inc hl
+	rrc c
+	jr nc,scanloop
+
+	ld a,00h	; turn off displays
+	out (disseg),a
+	out (disscan),a
+
+	pop hl
+	pop bc
+	pop af
+	ret
+
+conv7seg:
+	push bc		; this is really a lookup table fetch that allows
+	push hl		; for memory wrapping of the lower byte
+
+	ld hl, segs	; list of 0-9 digits which segs to light for each
+	and 0fh		; ensure a is in a valid range
+	ld c,a		; put into lwr half of bc
+	ld b,00h	; upper half is 0
+	add hl,bc	; 16-bit add
+	ld a,(hl)	; fetch value from memory
+
+	pop hl
+	pop bc
+	ret
+
+; ----------------------------------------------------------------------------
+; write to the SPI bus
+;
+; d = command
+; e = data byte
+; ----------------------------------------------------------------------------
+
+spi_wr:	push af
+	push bc
+	push de
+
+	ld c,spiport
+	ld b,8
+
+nbit:	ld a,0f8h	; set 3 lines low
+	rlc d		; next bit into CF
+	adc a,a		; Add Data bit 0
+	out (c),a	; set data
+	set 1,a		; set CLK High
+	out (c),a
+	ld a,00h	; set cLK low
+	out (c),a
+	dec b
+	jr nz, nbit
+
+	ld b,8
+
+nbit2:	ld a,078h
+	rlc e
+	adc a,a
+	out (c),a
+	set 1,a
+	out (c),a
+	ld a,00h
+	out (c),a
+	dec b
+	jr nz, nbit2
+
+	ld a,0fch	; raise CS
+	out (c),a
+
+	pop de
+	pop bc
+	pop af
+	ret
+
+
+; ----------------------------------------------------------------------------
+; read the DS1307 clock chip
+; ----------------------------------------------------------------------------
+
+rd1307:
+	push hl
+	push bc
+	push de
+
+	ld hl,reg_buffer
+	ld b,7		; 7 bytes to read
+
+	ld d,ds1307	; i2c address
+	rlc d		; 7 bits only
+	res 0,d		; new bit zero = 0 = write
+
+	call i2c_start
+	call i2c_txbyte
+	ld d,0		; second byte ; selects the required register = 0
+	call i2c_txbyte
+	call i2c_stop
+
+; the DS1307 auto-increments the register pointer after each read
+; so no need to constantly set the address in the loop
+
+lp1307:
+	ld d,ds1307	; i2c address
+	rlc d		; 7 bits only
+	set 0,d		; new bit zero = 1 = read
+
+	call i2c_start
+	call i2c_txbyte
+	call i2c_rxbyte
+	ld (hl),d	; store result into buffer; value read from ds1307
+	call i2c_stop
+
+	inc hl
+	djnz lp1307
+
+	pop de
+	pop bc
+	pop hl
+	ret
+
+
+; ----------------------------------------------------------------------------
+; set the DS1307 clock chip
+; ----------------------------------------------------------------------------
+
+set1307:
+	push hl
+	push bc
+	push de
+
+	ld hl,clockset
+	ld b,7		; 7 bytes to write
+	ld e,0		; starting from reg 0
+
+lps1307:
+	ld d,ds1307	; i2c address
+	rlc d		; 7 bits only
+	res 0,d		; new bit zero = 0 = write
+	call i2c_start
+	call i2c_txbyte
+	ld d,e		; second byte ; selects the required register
+	call i2c_txbyte
+
+	ld d,(hl)
+	call i2c_txbyte	; third byte = write our value
+	call i2c_stop
+
+	inc e
+	inc hl
+	djnz lps1307
+
+	pop de
+	pop bc
+	pop hl
+	ret
+
+
+; ----------------------------------------------------------------------------
+; process the clock chip's raw data into the display buffer format
+; ----------------------------------------------------------------------------
+
+convdata:
+	ld hl,reg_buffer	; src
+
+	ld a,(mode)
+	bit 7,a
+	jr nz, conv2
+
+	inc hl			; move to D/M/Y
+	inc hl
+	inc hl
+	inc hl
+
+conv2:	ld de,disp_buff		; dest (to be filled right to left)
+	inc de
+	inc de
+	inc de
+	inc de
+	inc de
+	inc de
+	ld a,00h
+
+;secs / date
+	rrd
+	ld (de),a
+	dec de
+	rrd
+	ld (de),a
+	dec de
+
+;mins / month
+	inc hl
+	rrd
+	ld (de),a
+	dec de
+	rrd
+	ld (de),a
+	dec de
+
+; hours / year
+	inc hl
+	rrd
+	ld (de),a
+	dec de
+	rrd
+	ld (de),a
+	dec de
+
+	ret
+
+
+; ----------------------------------------------------------------------------
+; Send the contents of the display buffer to the MAX7219 chip
+; ----------------------------------------------------------------------------
+
+maxout:	ld hl,disp_buff
+	ld d,8
+
+lout:	ld e,(hl)
+	call spi_wr
+	inc hl
+	dec d
+	jr nz, lout
+
+	ret
+
+
+; ----------------------------------------------------------------------------
+;	data, variables, etc.
+; ----------------------------------------------------------------------------
+
+reg_buffer:
+	.db 00h
+	.db 00h
+	.db 00h
+	.db 00h
+	.db 00h
+	.db 00h
+	.db 00h
+
+disp_buff:
+	.db 0fh
+	.db 0fh
+	.db 0fh
+	.db 0fh
+	.db 0fh
+	.db 0fh
+	.db 0fh
+	.db 0fh
+
+mode:	.db 80h
+
+keyflag	.db 00h
+keyval	.db 00h
+
+
+clockset:
+	.db 00h	; osc, 10secs, secs
+	.db 30h	; 10 mins, mins
+	.db 18h ; hours
+	.db 01h ; day
+	.db 07h ; date
+	.db 10h	; month
+	.db 22h	; year
+
+#ifdef SC1
+segs:
+	.db 3fh
+	.db 06h
+	.db 5bh
+	.db 4fh
+	.db 66h
+	.db 6dh
+	.db 7dh
+	.db 07h
+	.db 7fh
+	.db 6fh
+#endif
+
+#ifdef TEC1
+segs:
+	.db ebh
+	.db 28h
+	.db cdh
+	.db adh
+	.db 2eh
+	.db a7h
+	.db e7h
+	.db 29h
+	.db efh
+	.db 2fh
+#endif
+
+
+; ----------------------------------------------------------------------------
+; end of our code and data, end of program. goodbye!
+; ----------------------------------------------------------------------------
+
+	.end
+  
+  \\\\\\\\\\\\\\\\\\    analysis   \\\\\\\\\\\\\\\\\\\\\\\\\\
+  
+  The code provided is written in assembly language and is intended to run on a TEC-1 or SC-1 target machine. It is a test code for the TEC SPI2C board with MAX7219 and DS1307 RTC.
+
+Here is a step-by-step explanation of the code with comments:
+
+1. The code starts with some general information, including the target machines, copyright information, and a link to the project's GitHub repository.
+
+2. Global constants are defined, such as the memory addresses for the DS1307 RTC and the 7-segment display.
+
+3. The hardware initialization code begins. It resets the I2C and SPI buses to their idle states and initializes the MAX7219 7-segment display.
+
+4. The DS1307 RTC is set with the initial starting time and date.
+
+5. The main program loop starts. It reads the clock from the I2C bus, displays the clock on the internal 7-segment display (for testing purposes), and also displays the clock on the I2C 7-segment module.
+
+6. The "handlekey" subroutine is called to check if a keypress has occurred and perform some action if a key is pressed.
+
+7. The "pollkey" subroutine is called to update the keyboard buffer if a keypress is detected.
+
+8. The "ldelay" subroutine is a general-purpose delay loop used for pausing the program.
+
+9. The "i2c_start" subroutine is called to make the I2C bus active.
+
+10. The "i2c_stop" subroutine is called to return the I2C bus to the idle state.
+
+11. The "i2c_txbyte" subroutine is used to transmit a byte on the I2C bus.
+
+12. The "i2c_rxbyte" subroutine is used to receive a byte from the I2C bus.
+
+13. The "spi_wr" subroutine is called to write to the SPI bus. It takes a command and a data byte as input.
+
+14. The "rd1307" subroutine is used to read the DS1307 clock chip.
+
+15. The "set1307" subroutine is used to set the DS1307 clock chip with the desired time and date.
+
+16. The "convdata" subroutine processes the clock chip's raw data into the display buffer format.
+
+17. The "maxout" subroutine sends the contents of the display buffer to the MAX7219 chip for display.
+
+18. The code includes data sections, such as the register buffer, display buffer, mode flag, keyboard variables, clock set data, and segment patterns for the 7-segment display.
+
+19. The program ends with the ".end" directive.
+
+Please note that the code is specific to the TEC-1 and SC-1 target machines and relies on specific memory addresses and hardware configurations. It may not be directly applicable to other systems without modifications.
+
+Certainly! Here's the code rewritten as pseudo code with comments:
+
+```
+// Test code for TEC SPI2C board with MAX7219, DS1307 RTC
+
+// Define global constants
+ds1307 = 0x68    // I2C address for DS1307 RTC
+lc16b = 0xA0     // Memory address for 7-segment display
+
+// Hardware initialization
+Reset I2C bus to idle state
+Reset SPI bus to idle state
+Initialize SPI 7-segment display (MAX7219)
+Setup DS1307 initial starting time and date
+
+// Main program loop
+loop:
+    Read clock from I2C bus
+    Display clock on internal 7-segment display (for testing)
+    Display clock on I2C 7-segment module
+    Poll keyboard for keypress
+    Handle keypress, if any
+
+// Handle keypress
+handlekey:
+    If a key is pressed:
+        Set flag indicating keypress
+        Process the pressed key
+
+// Poll keyboard
+pollkey:
+    Read keyboard port
+    If a key is pressed:
+        Update key buffer
+    Return
+
+// General purpose delay loop
+ldelay:
+    Delay for a certain amount of time
+    Return
+
+// Make the I2C bus active
+i2c_start:
+    Set SCL and SDA to start condition
+    Return
+
+// Return I2C bus to idle
+i2c_stop:
+    Set SCL and SDA to stop condition
+    Return
+
+// Transmit a byte on the I2C bus
+i2c_txbyte:
+    Loop through each bit in the byte:
+        Set SDA to the current bit value
+        Set SCL high, then low
+    Receive ACK from device
+    Return ACK result
+
+// Receive a byte from the I2C bus
+i2c_rxbyte:
+    Loop through each bit to receive a byte:
+        Set SDA to tristate output
+        Set SCL high, then low
+        Read bit value from SDA
+        Store bit value in result byte
+    Send ACK
+    Return received byte
+
+// Utility routine to scan the internal 7-segment displays
+scan_7seg:
+    Loop through each display digit:
+        Set display value
+        Turn on display
+        Delay to show the value
+        Turn off display
+    Return
+
+// Convert data from DS1307 to display format
+convdata:
+    Convert seconds and date values to display format
+    Convert minutes and month values to display format
+    Convert hours and year values to display format
+    Return
+
+// Send display buffer contents to MAX7219
+maxout:
+    Loop through each byte in the display buffer:
+        Send byte to SPI bus
+    Return
+
+// Read DS1307 clock chip
+rd1307:
+    Loop through each DS1307 register:
+        Send register address to DS1307
+        Read register value from DS1307
+        Store value in buffer
+    Return
+
+// Set DS1307 clock chip
+set1307:
+    Loop through each clock set byte:
+        Send register address to DS1307
+        Send clock set value to DS1307
+    Return
+
+// Main program
+Start execution at the main loop
+```
+
+Please note that the pseudo code is meant to convey the logic and structure of the original code. The actual implementation may require adjustments depending on the programming language and platform being used.
+
+
