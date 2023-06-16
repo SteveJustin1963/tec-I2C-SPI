@@ -22,46 +22,28 @@ The code provided is written in assembly language and is intended to run on a TE
 Here is a step-by-step explanation of the code with comments:
 
 1. The code starts with some general information, including the target machines, copyright information, and a link to the project's GitHub repository.
-
 2. Global constants are defined, such as the memory addresses for the DS1307 RTC and the 7-segment display.
-
 3. The hardware initialization code begins. It resets the I2C and SPI buses to their idle states and initializes the MAX7219 7-segment display.
-
 4. The DS1307 RTC is set with the initial starting time and date.
-
 5. The main program loop starts. It reads the clock from the I2C bus, displays the clock on the internal 7-segment display (for testing purposes), and also displays the clock on the I2C 7-segment module.
-
 6. The "handlekey" subroutine is called to check if a keypress has occurred and perform some action if a key is pressed.
-
 7. The "pollkey" subroutine is called to update the keyboard buffer if a keypress is detected.
-
 8. The "ldelay" subroutine is a general-purpose delay loop used for pausing the program.
-
 9. The "i2c_start" subroutine is called to make the I2C bus active.
-
 10. The "i2c_stop" subroutine is called to return the I2C bus to the idle state.
-
 11. The "i2c_txbyte" subroutine is used to transmit a byte on the I2C bus.
-
 12. The "i2c_rxbyte" subroutine is used to receive a byte from the I2C bus.
-
 13. The "spi_wr" subroutine is called to write to the SPI bus. It takes a command and a data byte as input.
-
 14. The "rd1307" subroutine is used to read the DS1307 clock chip.
-
 15. The "set1307" subroutine is used to set the DS1307 clock chip with the desired time and date.
-
 16. The "convdata" subroutine processes the clock chip's raw data into the display buffer format.
-
 17. The "maxout" subroutine sends the contents of the display buffer to the MAX7219 chip for display.
-
 18. The code includes data sections, such as the register buffer, display buffer, mode flag, keyboard variables, clock set data, and segment patterns for the 7-segment display.
-
 19. The program ends with the ".end" directive.
 
 Please note that the code is specific to the TEC-1 and SC-1 target machines and relies on specific memory addresses and hardware configurations. It may not be directly applicable to other systems without modifications.
 
-Certainly! Here's the code rewritten as pseudo code with comments:
+## code rewritten as pseudo code with comments:
 
 ```
 // Test code for TEC SPI2C board with MAX7219, DS1307 RTC
@@ -170,9 +152,6 @@ set1307:
 // Main program
 Start execution at the main loop
 ```
-
-Please note that the pseudo code is meant to convey the logic and structure of the original code. The actual implementation may require adjustments depending on the programming language and platform being used.
-
 
 ## Ben Grimmett 
 is offering a solution for programmable logic using a CPLD (Complex Programmable Logic Device). The code provided is for two 8-bit registers which can be read and written to depending on the address. He is offering an assembled board for anyone interested and the software used is free. This CPLD can be used for I2C, SPI, RS232, serial graphics, etc. Programming it can either be done using a drag and drop schematic screen or by using VHDL or Verilog. Ben is also offering to make a thread with code examples to help get people started.
