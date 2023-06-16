@@ -15,7 +15,7 @@ https://github.com/1971Merlin/SPI2C
 ## Craig Jones and Craig Hart 
 have been working together to get Craig Hart's SPI2C board running on a Nokia 5110 display. Craig Jones is connecting various components to the I2C, such as a BMP180 and BME/BMP280 Temperature and Humidity sensor. Craig Hart is also cleaning up his code and turning it into a modular library.
 
-##  \\\\\\\\\\\\\\\\\\    analysis   \\\\\\\\\\\\\\\\\\\\\\\\\\
+##  analysis Craig Hart i2c code 
   
 The code provided is written in assembly language and is intended to run on a TEC-1 or SC-1 target machine. It is a test code for the TEC SPI2C board with MAX7219 and DS1307 RTC.
 
