@@ -154,4 +154,7 @@ Start execution at the main loop
 ```
 
 ## Ben Grimmett 
+
+- https://github.com/SteveJustin1963/tec-CPLD-BG
+
 is offering a solution for programmable logic using a CPLD (Complex Programmable Logic Device). The code provided is for two 8-bit registers which can be read and written to depending on the address. He is offering an assembled board for anyone interested and the software used is free. This CPLD can be used for I2C, SPI, RS232, serial graphics, etc. Programming it can either be done using a drag and drop schematic screen or by using VHDL or Verilog. Ben is also offering to make a thread with code examples to help get people started.
