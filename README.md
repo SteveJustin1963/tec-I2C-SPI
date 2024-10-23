@@ -207,4 +207,39 @@ Or you can code in vhdl or verilog
 for a more optimised tailored solution for your project. 
 
 Happy to make a thread with code examples to get you started.
+
+-- Signal Assignments
+
+process (CS,WR)
+begin
+    if CS='0' then -- If Chip Select of the Expansion port is Low then...
+        if WR = '1' then -- If Write signal on Expansion Port is High (CPU is requesting a read) then..
+            if A="00" then -- If the lower two address lines are 00 (0x1000) then..
+                D<=Reg1; -- Put the contents of Reg1 onto the Bus;
+            elsif
+                A="01" then -- Else, if Address lines are 01 (0x1001) then put Reg2 on the Bus
+                D<=Reg2;--;
+            else D<="ZZZZZZZZ";
+            end if;
+        else D<="ZZZZZZZZ";
+        end if;
+    else D<="ZZZZZZZZ";
+    end if;
+end process;
+
+process (CS,WR)
+begin
+    if CS='0' then -- Same as the above function except now if the CPU is requesting a Write, we’ll put the value D (Data Bus)
+        if WR = '0' then
+            if A="00" then
+                Reg1<=D;--;
+            elsif A="01" then
+                Reg2<=D;
+            end if;
+        end if;
+    end if;
+end process;
+
+
 ```
+
