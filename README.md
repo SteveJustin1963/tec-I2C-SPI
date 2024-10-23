@@ -180,10 +180,12 @@ Start execution at the main loop
 
 Ben Grimmett on FaceBook March 5, 2020
   · 
-" Perhaps this could make programmable logic a little less mysterious and maybe encourage discussion and integration into the TEC. 
+```
+Perhaps this could make programmable logic a little less mysterious and maybe encourage discussion and integration into the TEC. 
 In the pic is the code to make two 8bit registers and read and write to them depending on the address. 
 Let me know if you'd like an assembled board. The software is all free, a programmer is under $10 from eBay. 
 This small CPLD can easily manage i2c or spi comms, or rs232. You could drive a serial graphics or chr lcd, temp sensors, make a sound card, configurable clock for the z80, interrupt timebase etc. The options are truly endless. 
 You can program these chips via a drag and drop schematic screen, linking 74 series logic with wires using your mouse. 
 Or you can code in vhdl or verilog for a more optimised tailored solution for your project. 
-Happy to make a thread with code examples to get you started."
+Happy to make a thread with code examples to get you started.
+```
