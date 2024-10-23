@@ -178,4 +178,12 @@ Start execution at the main loop
 
 - https://github.com/SteveJustin1963/tec-CPLD-BG
 
-is offering a solution for programmable logic using a CPLD (Complex Programmable Logic Device). The code provided is for two 8-bit registers which can be read and written to depending on the address. He is offering an assembled board for anyone interested and the software used is free. This CPLD can be used for I2C, SPI, RS232, serial graphics, etc. Programming it can either be done using a drag and drop schematic screen or by using VHDL or Verilog. Ben is also offering to make a thread with code examples to help get people started.
+Ben Grimmett on FaceBook March 5, 2020
+  · 
+" Perhaps this could make programmable logic a little less mysterious and maybe encourage discussion and integration into the TEC. 
+In the pic is the code to make two 8bit registers and read and write to them depending on the address. 
+Let me know if you'd like an assembled board. The software is all free, a programmer is under $10 from eBay. 
+This small CPLD can easily manage i2c or spi comms, or rs232. You could drive a serial graphics or chr lcd, temp sensors, make a sound card, configurable clock for the z80, interrupt timebase etc. The options are truly endless. 
+You can program these chips via a drag and drop schematic screen, linking 74 series logic with wires using your mouse. 
+Or you can code in vhdl or verilog for a more optimised tailored solution for your project. 
+Happy to make a thread with code examples to get you started."
